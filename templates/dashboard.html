@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PulseBoard • Admin Dashboard</title>
+  <meta name="description" content="A production-style admin dashboard UI as a single self-contained HTML file for FastAPI responses." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg: #0b1020;           /* dark base */
+      --panel: #0f162d;        /* card background */
+      --muted: #9aa4b2;        /* muted text */
+      --text: #e6ebf2;         /* main text */
+      --brand: #6aa9ff;        /* accent */
+      --brand-2: #8b5cf6;      /* accent 2 */
+      --ok: #22c55e;
+      --warn: #f59e0b;
+      --bad: #ef4444;
+      --border: #1f2942;
+      --chip: #0b1327;
+      --chip-border: #1b2540;
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --radius: 16px;
+    }
+    [data-theme="light"]{ /* light mode */
+      --bg: #f6f7fb;
+      --panel: #ffffff;
+      --muted: #64748b;
+      --text: #0f172a;
+      --brand: #2563eb;
+      --brand-2: #7c3aed;
+      --ok: #16a34a;
+      --warn: #d97706;
+      --bad: #dc2626;
+      --border: #e2e8f0;
+      --chip: #f1f5f9;
+      --chip-border: #e2e8f0;
+      --shadow: 0 10px 25px rgba(2,6,23,.08);
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      background: radial-gradient(1200px 700px at 10% -10%, rgba(104,116,232,.12), transparent 40%),
+                  radial-gradient(800px 600px at 110% 10%, rgba(0,212,255,.10), transparent 45%),
+                  var(--bg);
+      color:var(--text);
+    }
+
+    /* Layout */
+    .layout{display:grid; grid-template-columns: 260px 1fr; min-height:100vh}
+    .sidebar{position:sticky; top:0; align-self:start; height:100vh; background:linear-gradient(180deg, rgba(20,28,60,.95), rgba(11,16,32,.95)), url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22160%22 height=%22160%22 viewBox=%220 0 40 40%22><g fill=%22%23121a36%22><path d=%22M0 0h40v40H0z%22/><circle cx=%225%22 cy=%225%22 r=%222%22 opacity=.35/><circle cx=%2225%22 cy=%2215%22 r=%221%22 opacity=.25/><circle cx=%2212%22 cy=%2227%22 r=%221.2%22 opacity=.2/></g></svg>'); border-right:1px solid var(--border);}
+    .brand{display:flex; align-items:center; gap:10px; padding:22px 18px 14px; border-bottom:1px solid var(--border)}
+    .brand .logo{width:36px; height:36px; border-radius:12px; background:linear-gradient(135deg, var(--brand), var(--brand-2)); box-shadow: inset 0 0 20px rgba(255,255,255,.15), var(--shadow);}
+    .brand .title{font-weight:800; letter-spacing:.2px}
+
+    .nav{padding:12px}
+    .nav h4{margin:16px 12px 6px; font-weight:700; opacity:.75; font-size:12px; color:var(--muted); text-transform:uppercase}
+    .nav a{display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:12px; text-decoration:none; color:var(--text); border:1px solid transparent}
+    .nav a:hover{background:rgba(255,255,255,.04); border-color:var(--border)}
+    .nav a.active{background:linear-gradient(90deg, rgba(106,169,255,.18), transparent 65%); border-color:var(--chip-border)}
+    .nav .icon{width:18px; height:18px; opacity:.9}
+
+    .main{min-width:0;}
+    .topbar{position:sticky; top:0; z-index:20; backdrop-filter: blur(8px); background: linear-gradient(180deg, rgba(15,22,45,.75), rgba(15,22,45,.35) 60%, transparent); border-bottom:1px solid var(--border);}
+    .top-inner{display:flex; align-items:center; gap:12px; padding:12px 18px}
+    .search{flex:1; display:flex; align-items:center; gap:10px; background:var(--panel); border:1px solid var(--border); border-radius:999px; padding:8px 14px}
+    .search input{flex:1; background:transparent; border:none; color:var(--text); outline:none}
+    .btn{display:inline-flex; align-items:center; gap:8px; padding:10px 14px; border-radius:12px; border:1px solid var(--border); background:var(--panel); color:var(--text); cursor:pointer; box-shadow:var(--shadow)}
+    .btn.primary{background:linear-gradient(135deg, var(--brand), var(--brand-2)); border:none}
+    .btn.ghost{background:transparent}
+
+    .content{padding:20px; display:grid; grid-template-columns: 1.2fr 1fr; gap:20px}
+    @media (max-width: 1080px){ .layout{grid-template-columns: 80px 1fr} .content{grid-template-columns: 1fr} .nav .label{display:none} .brand .title{display:none} }
+
+    .card{background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow)}
+    .card-header{display:flex; justify-content:space-between; align-items:center; padding:16px 18px; border-bottom:1px dashed var(--border)}
+    .card-body{padding:18px}
+
+    .grid{display:grid; gap:16px}
+    .grid.cols-4{grid-template-columns: repeat(4, 1fr)}
+    .grid.cols-3{grid-template-columns: repeat(3, 1fr)}
+    .grid.cols-2{grid-template-columns: repeat(2, 1fr)}
+    @media (max-width: 1280px){ .grid.cols-4{grid-template-columns: repeat(2, 1fr)} }
+    @media (max-width: 640px){ .grid.cols-3, .grid.cols-2, .grid.cols-4{grid-template-columns: 1fr} }
+
+    .metric{display:flex; align-items:center; justify-content:space-between; gap:14px; padding:16px; border:1px solid var(--border); border-radius:14px; background:linear-gradient(180deg, rgba(255,255,255,.02), transparent)}
+    .metric .kpi{font-size:22px; font-weight:800}
+    .metric .delta{font-size:12px; padding:3px 8px; border-radius:10px; border:1px solid var(--chip-border); background:var(--chip); color:var(--muted)}
+    .metric .trend{height:36px; width:120px}
+
+    .table{width:100%; border-collapse: collapse}
+    .table th, .table td{padding:12px 10px; border-bottom:1px solid var(--border); text-align:left}
+    .table th{font-size:12px; letter-spacing:.4px; color:var(--muted); text-transform:uppercase; cursor:pointer}
+    .table tr:hover td{background:rgba(255,255,255,.02)}
+    .status{display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border-radius:999px; border:1px solid var(--chip-border); background:var(--chip); font-size:12px}
+    .status.ok{border-color:rgba(34,197,94,.35);}
+    .status.warn{border-color:rgba(245,158,11,.35);}
+    .status.bad{border-color:rgba(239,68,68,.35);}
+
+    .flex{display:flex; gap:12px; align-items:center}
+    .right{margin-left:auto}
+    .muted{color:var(--muted)}
+    .badge{padding:6px 10px; border-radius:999px; border:1px solid var(--chip-border); background:var(--chip); font-size:12px}
+    .sep{height:1px; background:var(--border); margin:12px 0}
+
+    .footer{padding:24px; color:var(--muted)}
+
+    /* Modal & Toast */
+    .modal-backdrop{position:fixed; inset:0; background:rgba(2,6,23,.55); display:none; align-items:center; justify-content:center; z-index:50}
+    .modal{width:min(640px, 92vw); background:var(--panel); border:1px solid var(--border); border-radius:18px; box-shadow:var(--shadow)}
+    .toast{position:fixed; right:18px; bottom:18px; display:grid; gap:10px; z-index:60}
+    .toast .item{background:var(--panel); border:1px solid var(--border); padding:12px 14px; border-radius:12px; box-shadow:var(--shadow)}
+
+    /* Tiny helpers */
+    .sr-only{position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); border:0}
+    .kbd{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size:12px; padding:2px 6px; border-radius:6px; border:1px solid var(--chip-border); background:var(--chip); color:var(--muted)}
+
+    /* Charts canvas sizes */
+    canvas{max-width:100%; height:auto}
+  </style>
+</head>
+<body>
+  <div class="layout" id="app">
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div class="title">PulseBoard</div>
+        <button class="btn ghost right" id="themeToggle" aria-label="Toggle theme">🌓</button>
+      </div>
+      <nav class="nav">
+        <h4>메인</h4>
+        <a href="#overview" class="active"><span class="icon">📊</span><span class="label">대시보드</span></a>
+        <a href="#orders"><span class="icon">🧾</span><span class="label">주문 관리</span></a>
+        <a href="#customers"><span class="icon">👥</span><span class="label">고객</span></a>
+        <a href="#products"><span class="icon">📦</span><span class="label">상품</span></a>
+        <a href="#automations"><span class="icon">⚙️</span><span class="label">자동화</span></a>
+        <h4>분석</h4>
+        <a href="#revenue"><span class="icon">💹</span><span class="label">매출 분석</span></a>
+        <a href="#retention"><span class="icon">♻️</span><span class="label">리텐션</span></a>
+        <a href="#funnels"><span class="icon">🪜</span><span class="label">전환 퍼널</span></a>
+        <h4>시스템</h4>
+        <a href="#settings"><span class="icon">🛠️</span><span class="label">설정</span></a>
+        <a href="#logs"><span class="icon">🗂️</span><span class="label">로그</span></a>
+        <a href="#help"><span class="icon">❓</span><span class="label">도움말</span></a>
+      </nav>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main">
+      <!-- TOPBAR -->
+      <div class="topbar">
+        <div class="top-inner">
+          <div class="search">
+            <span>🔎</span>
+            <input id="searchInput" placeholder="Search anything… (Press / to focus)" />
+            <span class="kbd">/</span>
+          </div>
+          <button class="btn" onclick="openModal('newReport')">+ 새 리포트</button>
+          <button class="btn" id="notifyBtn">알림</button>
+          <button class="btn" onclick="fakeSync()">⟳ 동기화</button>
+        </div>
+      </div>
+
+      <!-- CONTENT GRID -->
+      <section class="content" id="overview">
+        <div class="grid cols-4">
+          <div class="card">
+            <div class="card-body metric">
+              <div>
+                <div class="muted">오늘 매출</div>
+                <div class="kpi">₩ 8,240,000</div>
+                <div class="delta">어제 대비 +14.8%</div>
+              </div>
+              <svg class="trend" viewBox="0 0 120 36" preserveAspectRatio="none" aria-hidden="true">
+                <polyline fill="none" stroke="currentColor" stroke-width="2" points="0,28 18,30 36,18 54,22 72,14 90,20 108,10 120,12" />
+              </svg>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-body metric">
+              <div>
+                <div class="muted">신규 고객</div>
+                <div class="kpi">1,284</div>
+                <div class="delta" style="color:var(--ok)">주간 +6.3%</div>
+              </div>
+              <svg class="trend" viewBox="0 0 120 36" preserveAspectRatio="none">
+                <polyline fill="none" stroke="currentColor" stroke-width="2" points="0,26 18,25 36,22 54,19 72,16 90,13 108,12 120,10" />
+              </svg>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-body metric">
+              <div>
+                <div class="muted">반품율</div>
+                <div class="kpi">1.8%</div>
+                <div class="delta" style="color:var(--ok)">목표 이하</div>
+              </div>
+              <svg class="trend" viewBox="0 0 120 36" preserveAspectRatio="none">
+                <polyline fill="none" stroke="currentColor" stroke-width="2" points="0,14 18,16 36,18 54,20 72,22 90,26 108,27 120,28" />
+              </svg>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-body metric">
+              <div>
+                <div class="muted">서버 상태</div>
+                <div class="kpi">99.97% up</div>
+                <div class="delta" style="color:var(--warn)">지연 142ms</div>
+              </div>
+              <svg class="trend" viewBox="0 0 120 36" preserveAspectRatio="none">
+                <polyline fill="none" stroke="currentColor" stroke-width="2" points="0,10 18,10 36,10 54,12 72,10 90,10 108,10 120,12" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid cols-2">
+          <!-- Left: Mixed Chart Card -->
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <strong>매출 & 방문자 추이</strong>
+                <div class="muted">지난 30일 | 우측 메뉴에서 지표 선택</div>
+              </div>
+              <div class="flex">
+                <label class="badge"><input type="checkbox" id="smoothToggle"> 스무딩</label>
+                <select id="metricSelect" class="badge">
+                  <option value="revenue">Revenue</option>
+                  <option value="orders">Orders</option>
+                  <option value="visitors" selected>Visitors</option>
+                </select>
+              </div>
+            </div>
+            <div class="card-body">
+              <canvas id="lineChart" width="900" height="320" aria-label="Revenue/Visitors chart" role="img"></canvas>
+            </div>
+          </div>
+
+          <!-- Right: Conversion Funnel & Segments -->
+          <div class="card">
+            <div class="card-header">
+              <strong>전환 퍼널</strong>
+              <div class="right badge">실험 A/B 활성</div>
+            </div>
+            <div class="card-body">
+              <div class="grid">
+                <div class="flex" style="justify-content:space-between">
+                  <div>노출</div>
+                  <div class="muted">1,024,000</div>
+                </div>
+                <div style="height:12px; background:linear-gradient(90deg, var(--brand), transparent); border-radius:999px"></div>
+                <div class="flex" style="justify-content:space-between">
+                  <div>클릭</div>
+                  <div class="muted">121,400 (11.9%)</div>
+                </div>
+                <div style="height:12px; background:linear-gradient(90deg, var(--brand), transparent); width:55%; border-radius:999px"></div>
+                <div class="flex" style="justify-content:space-between">
+                  <div>장바구니</div>
+                  <div class="muted">18,240 (15.0%)</div>
+                </div>
+                <div style="height:12px; background:linear-gradient(90deg, var(--brand-2), transparent); width:28%; border-radius:999px"></div>
+                <div class="flex" style="justify-content:space-between">
+                  <div>결제</div>
+                  <div class="muted">11,002 (60.3%)</div>
+                </div>
+                <div style="height:12px; background:linear-gradient(90deg, var(--ok), transparent); width:18%; border-radius:999px"></div>
+              </div>
+              <div class="sep"></div>
+              <div class="flex" style="justify-content:space-between">
+                <div class="badge">세그먼트: 전체</div>
+                <div class="flex">
+                  <button class="btn" onclick="addToast('세그먼트를 업데이트했습니다.')">세그먼트 저장</button>
+                  <button class="btn ghost" onclick="openModal('segmentBuilder')">세그먼트 빌더</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Orders Table -->
+        <div class="card" id="orders">
+          <div class="card-header">
+            <strong>최근 주문</strong>
+            <div class="flex">
+              <input id="orderFilter" class="badge" placeholder="고객/주문ID 검색" />
+              <select id="statusFilter" class="badge">
+                <option value="">상태 전체</option>
+                <option>처리중</option>
+                <option>배송중</option>
+                <option>완료</option>
+                <option>환불</option>
+              </select>
+              <button class="btn" onclick="exportCSV()">CSV 내보내기</button>
+            </div>
+          </div>
+          <div class="card-body">
+            <table class="table" id="ordersTable" aria-describedby="최근 주문 테이블">
+              <thead>
+                <tr>
+                  <th data-sort="id">주문 ID</th>
+                  <th data-sort="customer">고객</th>
+                  <th data-sort="amount">금액</th>
+                  <th data-sort="status">상태</th>
+                  <th data-sort="date">일시</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+            <div class="flex" style="justify-content:space-between; margin-top:12px">
+              <div class="muted" id="rowCount">0 rows</div>
+              <div class="flex">
+                <button class="btn ghost" onclick="paginate(-1)">이전</button>
+                <span class="badge" id="pageInfo">1 / 1</span>
+                <button class="btn ghost" onclick="paginate(1)">다음</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right rail content -->
+        <div class="grid cols-2">
+          <div class="card" id="activity">
+            <div class="card-header">
+              <strong>실시간 액티비티</strong>
+              <span class="badge">스트림</span>
+            </div>
+            <div class="card-body" id="activityFeed" style="max-height:340px; overflow:auto">
+              <!-- filled by JS -->
+            </div>
+          </div>
+          <div class="card" id="goals">
+            <div class="card-header">
+              <strong>OKR / 목표</strong>
+              <button class="btn ghost" onclick="openModal('okr')">편집</button>
+            </div>
+            <div class="card-body">
+              <div class="grid">
+                <div>
+                  <div class="flex" style="justify-content:space-between">
+                    <div>월간 매출 ₩120M</div>
+                    <div class="muted">70%</div>
+                  </div>
+                  <div style="height:10px; background:var(--chip); border:1px solid var(--chip-border); border-radius:999px; overflow:hidden">
+                    <div style="height:100%; width:70%; background:linear-gradient(90deg, var(--brand), var(--brand-2))"></div>
+                  </div>
+                </div>
+                <div>
+                  <div class="flex" style="justify-content:space-between"><div>재구매율 32%+</div><div class="muted">28%</div></div>
+                  <div style="height:10px; background:var(--chip); border:1px solid var(--chip-border); border-radius:999px; overflow:hidden">
+                    <div style="height:100%; width:28%; background:linear-gradient(90deg, var(--ok), var(--brand))"></div>
+                  </div>
+                </div>
+                <div>
+                  <div class="flex" style="justify-content:space-between"><div>NPS 62+</div><div class="muted">58</div></div>
+                  <div style="height:10px; background:var(--chip); border:1px solid var(--chip-border); border-radius:999px; overflow:hidden">
+                    <div style="height:100%; width:58%; background:linear-gradient(90deg, var(--warn), var(--ok))"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="sep"></div>
+              <div class="flex" style="justify-content:space-between">
+                <div class="badge">알림: 위험 SKU 3개</div>
+                <button class="btn" onclick="addToast('재고 발주 요청을 전송했습니다.')">발주 요청</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- System Logs / Settings -->
+        <div class="grid cols-2" id="logs">
+          <div class="card">
+            <div class="card-header"><strong>시스템 로그</strong> <span class="badge">최근 200개</span></div>
+            <div class="card-body" style="max-height:300px; overflow:auto; font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size:12px" id="logsBox"></div>
+          </div>
+          <div class="card" id="settings">
+            <div class="card-header"><strong>환경 설정</strong></div>
+            <div class="card-body">
+              <div class="grid cols-2">
+                <label class="badge"><input type="checkbox" id="abToggle" checked> A/B 테스트 활성</label>
+                <label class="badge"><input type="checkbox" id="rtToggle" checked> 실시간 데이터</label>
+                <label class="badge"><input type="checkbox" id="safeMode"> 세이프 모드</label>
+                <label class="badge"><input type="checkbox" id="emailToggle" checked> 이메일 알림</label>
+              </div>
+              <div class="sep"></div>
+              <div class="grid cols-2">
+                <div>
+                  <div class="muted">웹훅 URL</div>
+                  <input id="webhook" class="badge" placeholder="https://api.example.com/webhook" style="width:100%" />
+                </div>
+                <div>
+                  <div class="muted">API 키</div>
+                  <input id="apikey" class="badge" placeholder="sk-••••••••" style="width:100%" />
+                </div>
+              </div>
+              <div class="sep"></div>
+              <button class="btn primary" onclick="addToast('설정을 저장했습니다.')">설정 저장</button>
+            </div>
+          </div>
+        </div>
+
+        <footer class="footer">
+          © <span id="year"></span> PulseBoard • Built for FastAPI HTMLResponse. <span class="muted">v1.0</span>
+        </footer>
+      </section>
+    </main>
+  </div>
+
+  <!-- MODALS -->
+  <div class="modal-backdrop" id="modal-newReport" role="dialog" aria-modal="true" aria-labelledby="modalTitle-newReport">
+    <div class="modal">
+      <div class="card-header"><strong id="modalTitle-newReport">새 리포트 생성</strong>
+        <button class="btn ghost right" onclick="closeModal('newReport')">✕</button>
+      </div>
+      <div class="card-body grid">
+        <label class="badge"><input type="checkbox" checked> 매출 개요</label>
+        <label class="badge"><input type="checkbox"> 채널 성과</label>
+        <label class="badge"><input type="checkbox" checked> 고객 세그먼트</label>
+        <label class="badge"><input type="checkbox"> 서버 메트릭</label>
+        <div class="sep"></div>
+        <button class="btn primary" onclick="createReport()">생성</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="modal-segmentBuilder" role="dialog" aria-modal="true" aria-labelledby="modalTitle-segmentBuilder">
+    <div class="modal">
+      <div class="card-header"><strong id="modalTitle-segmentBuilder">세그먼트 빌더</strong>
+        <button class="btn ghost right" onclick="closeModal('segmentBuilder')">✕</button>
+      </div>
+      <div class="card-body">
+        <div class="grid cols-3">
+          <div>
+            <div class="muted">필터</div>
+            <select class="badge" id="segField">
+              <option>Email Domain</option>
+              <option>Country</option>
+              <option>Orders Count</option>
+              <option>LTV</option>
+            </select>
+          </div>
+          <div>
+            <div class="muted">조건</div>
+            <select class="badge" id="segOp">
+              <option>is</option>
+              <option>is not</option>
+              <option>contains</option>
+              <option>>=</option>
+            </select>
+          </div>
+          <div>
+            <div class="muted">값</div>
+            <input class="badge" id="segVal" placeholder="e.g. gmail.com or 3" />
+          </div>
+        </div>
+        <div class="sep"></div>
+        <button class="btn" onclick="addToast('미리보기: 3,284명 매칭')">미리보기</button>
+        <button class="btn primary" onclick="closeModal('segmentBuilder'); addToast('세그먼트가 저장되었습니다.')">세그먼트 저장</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="modal-okr" role="dialog" aria-modal="true" aria-labelledby="modalTitle-okr">
+    <div class="modal">
+      <div class="card-header"><strong id="modalTitle-okr">OKR 편집</strong>
+        <button class="btn ghost right" onclick="closeModal('okr')">✕</button>
+      </div>
+      <div class="card-body">
+        <div class="grid">
+          <label>월간 매출 목표 <input class="badge" value="120000000" /></label>
+          <label>재구매율 목표 <input class="badge" value="0.32" /></label>
+          <label>NPS 목표 <input class="badge" value="62" /></label>
+          <div class="sep"></div>
+          <button class="btn primary" onclick="closeModal('okr'); addToast('OKR 저장 완료')">저장</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOASTS -->
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // Theme toggle & keyboard shortcuts
+    const root = document.documentElement;
+    const themeToggle = document.getElementById('themeToggle');
+    const savedTheme = localStorage.getItem('theme');
+    if(savedTheme){ document.documentElement.setAttribute('data-theme', savedTheme); }
+    themeToggle.addEventListener('click', () => {
+      const next = (document.documentElement.getAttribute('data-theme') === 'light') ? '' : 'light';
+      if(next){ document.documentElement.setAttribute('data-theme', next); } else { document.documentElement.removeAttribute('data-theme'); }
+      localStorage.setItem('theme', document.documentElement.getAttribute('data-theme') || '');
+    });
+
+    document.addEventListener('keydown', (e)=>{
+      if(e.key === '/') { document.getElementById('searchInput').focus(); e.preventDefault(); }
+      if(e.key === 'Escape'){ closeAllModals(); }
+    });
+
+    // Topbar actions
+    function fakeSync(){ addToast('백그라운드 동기화를 시작했습니다. (20초 내 완료 예상)'); }
+
+    // Toasts
+    const toast = document.getElementById('toast');
+    function addToast(msg){
+      const el = document.createElement('div');
+      el.className = 'item';
+      el.textContent = msg;
+      toast.appendChild(el);
+      setTimeout(()=>{ el.style.opacity = '0'; el.style.transform = 'translateY(8px)'; }, 3500);
+      setTimeout(()=>{ el.remove(); }, 4200);
+    }
+    document.getElementById('notifyBtn').addEventListener('click', ()=>{
+      addToast('새로운 주문 42건이 도착했습니다.');
+      addToast('서버 응답시간 정상화: 98ms');
+    });
+
+    // Modals
+    function openModal(name){ document.getElementById('modal-' + name).style.display = 'flex'; }
+    function closeModal(name){ document.getElementById('modal-' + name).style.display = 'none'; }
+    function closeAllModals(){ document.querySelectorAll('.modal-backdrop').forEach(m => m.style.display = 'none'); }
+
+    function createReport(){
+      closeModal('newReport');
+      addToast('리포트를 생성했습니다. 좌측 네비게이션에 추가되었어요.');
+    }
+
+    // Simple charting util (Canvas 2D)
+    const lineChart = document.getElementById('lineChart');
+    const ctx = lineChart.getContext('2d');
+
+    const DATASETS = {
+      visitors: Array.from({length: 30}, (_,i)=> Math.round(800 + 400*Math.sin(i/3) + 200*Math.random() )),
+      revenue:  Array.from({length: 30}, (_,i)=> Math.round(4_000_000 + 1_200_000*Math.sin(i/2.7) + 500_000*Math.random() )),
+      orders:   Array.from({length: 30}, (_,i)=> Math.round(400 + 140*Math.sin(i/2.4) + 80*Math.random() )),
+    };
+
+    function drawChart(metric='visitors', smooth=false){
+      const w = lineChart.width, h = lineChart.height;
+      ctx.clearRect(0,0,w,h);
+      // grid
+      ctx.globalAlpha = 0.5; ctx.strokeStyle = getComputedStyle(root).getPropertyValue('--border');
+      for(let i=0;i<=5;i++){ const y = 40 + (h-80)*i/5; ctx.beginPath(); ctx.moveTo(56,y); ctx.lineTo(w-20,y); ctx.stroke(); }
+      // axes
+      ctx.globalAlpha = 1; ctx.strokeStyle = getComputedStyle(root).getPropertyValue('--muted');
+      ctx.beginPath(); ctx.moveTo(56,20); ctx.lineTo(56,h-20); ctx.lineTo(w-20,h-20); ctx.stroke();
+
+      const data = DATASETS[metric];
+      const min = Math.min(...data)*0.9; const max = Math.max(...data)*1.1;
+      const sx = (w-80)/(data.length-1); const sy = (h-80)/(max-min);
+
+      // area fill
+      ctx.beginPath();
+      data.forEach((v,i)=>{
+        const x = 56 + i*sx; const y = h-20 - (v-min)*sy;
+        if(i===0){ ctx.moveTo(x,y); } else if(smooth){
+          const px = 56 + (i-1)*sx; const py = h-20 - (data[i-1]-min)*sy;
+          const cx = (px + x)/2; ctx.bezierCurveTo(cx,py, cx,y, x,y);
+        } else { ctx.lineTo(x,y); }
+      });
+      ctx.lineTo(w-20,h-20); ctx.lineTo(56,h-20); ctx.closePath();
+      ctx.globalAlpha = 0.15; ctx.fillStyle = getComputedStyle(root).getPropertyValue('--brand'); ctx.fill();
+
+      // line
+      ctx.globalAlpha = 1; ctx.lineWidth = 2.25; ctx.strokeStyle = getComputedStyle(root).getPropertyValue('--brand');
+      ctx.beginPath();
+      data.forEach((v,i)=>{
+        const x = 56 + i*sx; const y = h-20 - (v-min)*sy;
+        if(i===0){ ctx.moveTo(x,y); } else if(smooth){
+          const px = 56 + (i-1)*sx; const py = h-20 - (data[i-1]-min)*sy;
+          const cx = (px + x)/2; ctx.bezierCurveTo(cx,py, cx,y, x,y);
+        } else { ctx.lineTo(x,y); }
+      });
+      ctx.stroke();
+
+      // y labels
+      ctx.fillStyle = getComputedStyle(root).getPropertyValue('--muted');
+      ctx.font = '12px Inter'; ctx.textAlign='right';
+      for(let i=0;i<=5;i++){
+        const v = min + (max-min)*i/5; const y = h-20 - (v-min)*sy;
+        ctx.fillText(formatNumber(v), 50, y+4);
+      }
+      // x labels
+      ctx.textAlign='center';
+      for(let i=0;i<data.length;i+=5){ const x = 56 + i*sx; ctx.fillText('D-' + (data.length-i), x, h-5); }
+    }
+
+    function formatNumber(n){
+      if(n >= 1_000_000) return '₩' + Math.round(n/1_000_000) + 'M';
+      if(n >= 1_000) return Math.round(n/1_000) + 'k';
+      return String(Math.round(n));
+    }
+
+    // Chart controls
+    document.getElementById('metricSelect').addEventListener('change', (e)=> drawChart(e.target.value, document.getElementById('smoothToggle').checked));
+    document.getElementById('smoothToggle').addEventListener('change', (e)=> drawChart(document.getElementById('metricSelect').value, e.target.checked));
+
+    // Orders fake data & table logic
+    const tableBody = document.querySelector('#ordersTable tbody');
+    const orderFilter = document.getElementById('orderFilter');
+    const statusFilter = document.getElementById('statusFilter');
+    const pageInfo = document.getElementById('pageInfo');
+    const rowCount = document.getElementById('rowCount');
+
+    let sortKey = 'date'; let sortDir = 'desc'; let page = 1; const pageSize = 10;
+
+    const ORDERS = Array.from({length: 200}, (_,i)=>{
+      const id = 100100 + i;
+      const amount = Math.round(26000 + Math.random()*800000);
+      const statuses = ['처리중','배송중','완료','환불'];
+      const status = statuses[Math.floor(Math.random()*statuses.length)];
+      const names = ['Kim','Lee','Park','Choi','Jung','Kang','Cho','Yoon','Jang','Lim'];
+      const customer = names[Math.floor(Math.random()*names.length)] + ' ' + ['Soo','Min','Jae','Sun','Hyun'][Math.floor(Math.random()*5)];
+      const date = new Date(Date.now() - Math.random()*1000*60*60*24*30);
+      return { id, customer, amount, status, date };
+    });
+
+    function renderTable(){
+      const q = orderFilter.value.toLowerCase();
+      const s = statusFilter.value;
+      let filtered = ORDERS.filter(r=> (!q || r.customer.toLowerCase().includes(q) || String(r.id).includes(q)) && (!s || r.status===s));
+      filtered.sort((a,b)=>{
+        let va=a[sortKey], vb=b[sortKey];
+        if(va instanceof Date) va=va.getTime(); if(vb instanceof Date) vb=vb.getTime();
+        return sortDir==='asc' ? (va>vb?1:-1) : (va<vb?1:-1);
+      });
+      const total = filtered.length; const pages = Math.max(1, Math.ceil(total/pageSize));
+      if(page>pages) page = pages;
+      const start = (page-1)*pageSize; const rows = filtered.slice(start, start+pageSize);
+
+      tableBody.innerHTML = rows.map(r=>`
+        <tr>
+          <td><span class="badge">#${r.id}</span></td>
+          <td>${r.customer}</td>
+          <td>₩ ${r.amount.toLocaleString()}</td>
+          <td>${statusPill(r.status)}</td>
+          <td>${r.date.toLocaleString()}</td>
+        </tr>`).join('');
+
+      pageInfo.textContent = `${page} / ${pages}`;
+      rowCount.textContent = `${total} rows`;
+    }
+
+    function statusPill(s){
+      const cls = s==='완료' ? 'ok' : s==='환불' ? 'bad' : s==='배송중' ? 'warn' : '';
+      return `<span class="status ${cls}">${s}</span>`;
+    }
+
+    function paginate(delta){ page = Math.max(1, page + delta); renderTable(); }
+
+    document.querySelectorAll('#orders thead th').forEach(th=>{
+      th.addEventListener('click', ()=>{
+        const key = th.getAttribute('data-sort');
+        if(sortKey === key){ sortDir = (sortDir==='asc'?'desc':'asc'); } else { sortKey = key; sortDir = 'asc'; }
+        renderTable();
+      })
+    })
+
+    orderFilter.addEventListener('input', renderTable);
+    statusFilter.addEventListener('change', renderTable);
+
+    function exportCSV(){
+      const rows = [['id','customer','amount','status','date']]
+        .concat(ORDERS.map(r=>[r.id, r.customer, r.amount, r.status, r.date.toISOString()]));
+      const csv = rows.map(r=> r.map(v=>`"${String(v).replaceAll('"','""')}"`).join(',')).join('\n');
+      const blob = new Blob([csv], {type:'text/csv'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob); a.download = 'orders.csv'; a.click();
+    }
+
+    // Activity feed (live append)
+    const activity = document.getElementById('activityFeed');
+    function pushActivity(text){
+      const row = document.createElement('div');
+      row.className = 'flex';
+      row.innerHTML = `<span class="badge">${new Date().toLocaleTimeString()}</span> <div>${text}</div>`;
+      activity.prepend(row);
+    }
+    setInterval(()=>{ // random events
+      const events = [
+        '신규 주문 #'+(100100+Math.floor(Math.random()*500)),
+        '고객 문의 1건 접수',
+        'A/B 실험 B군 전환율 +3.1%p',
+        '서버 응답 시간 110ms → 95ms 개선',
+        '재고 경고: SKU-12, SKU-98',
+      ];
+      pushActivity(events[Math.floor(Math.random()*events.length)]);
+    }, 3500);
+
+    // Logs
+    const logsBox = document.getElementById('logsBox');
+    function addLog(line){ const el = document.createElement('div'); el.textContent = line; logsBox.prepend(el); }
+    setInterval(()=> addLog(`[${new Date().toISOString()}] INFO  worker-1  handled request 200 OK`), 2800);
+
+    // Init
+    drawChart('visitors', false);
+    renderTable();
+    document.getElementById('year').textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>
