@@ -19,7 +19,7 @@ templates = Jinja2Templates(directory="templates")
 @app.get("/html", response_class=HTMLResponse)
 def html(request: Request):
     print("html")
-    return templates.TemplateResponse("dashboard.html", {"request": request, "data": data[0]})
+    return templates.TemplateResponse("dashboard.html", {"request": request})
 
 
 # @app.get("/html", response_class=HTMLResponse)
